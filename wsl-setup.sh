@@ -52,6 +52,8 @@ else
 fi
 
 #WSL GIT config
+# https://docs.microsoft.com/en-us/windows/wsl/tutorials/wsl-git
+# Set Git inside WSL to use windows credentials manager which works well with enterprise SSO systems
 if [[ -z $(git config --get credential.helper) ]]; then 
 	git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-manager-core.exe"
 	git config --global credential.https://dev.azure.com.useHttpPath true
