@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "4ops.packer",
+        "ms-vscode.powershell",
+        "ms-python.python",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode-remote.remote-wsl",
+        "redhat.vscode-yaml",
+        "4ops.terraform",
+        "eamodio.gitlens"
+    ]
+}
