@@ -39,14 +39,14 @@ fi
 #direnv Install to bash 
 if [[ -z $(direnv --version) ]]; then
 	echo "Install and config direnv"
-	asdf plugin-add direnv
+	asdf plugin add direnv
 	asdf install direnv latest
 	asdf global direnv latest
 	#https://github.com/direnv/direnv/blob/master/docs/installation.md
 	#apt install -y direnv
 	#https://github.com/direnv/direnv/blob/master/docs/hook.md 
 	echo 'eval "$(asdf exec direnv hook bash)"' | tee -a $HOME/.bashrc
-	
+	echo 'eval "$(asdf exec direnv hook zsh)"' | tee -a $HOME/.zshrc
 else
 	echo "direnv already installed"
 fi
@@ -131,7 +131,6 @@ if [[ -z $(grep starship $HOME/.zshrc) ]]; then
 	echo "Adding the following to .zshrc:"
 	cat <<EOF >> $HOME/.zshrc
 plugins=(git asdf helm kubectl kubectx aws aliases battery gnu-utils history man python pylint pyenv terraform ubuntu)
-eval "$(direnv hook zsh)"
 eval "$(saml2aws --completion-script-zsh)"
 export EDITOR="vim"
 alias fdate="sudo ntpdate pool.ntp.org"
