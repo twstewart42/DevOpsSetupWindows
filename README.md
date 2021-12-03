@@ -4,11 +4,11 @@ Install and Setup DevOps Utilities that I routinely need on Windows/WSL based de
 I got tired of repeating the same steps anytime I needed to start fresh on a new machine or get a new member on my team onboard. This takes a few hours of manual work down to a few minutes of casually waiting for things to work.
 
 # DESCRIPTION
-Installs git, WSL2, (scoop)[https://scoop.sh/], python3, docker desktop, VSC, Win Terminal, and more.  
-Within WSL2/Ubuntu 20.04 configures and installs (ASDF)[https://asdf-vm.com/], (direnv)[https://direnv.net/], and all utilities necessary for DevOps/SRE work I typically engage in.   
+Installs git, WSL2, [scoop](https://scoop.sh/), python3, docker desktop, VSC, Win Terminal, and more.  
+Within WSL2/Ubuntu 20.04 configures and installs [ASDF](https://asdf-vm.com/), [direnv](https://direnv.net/), and all utilities necessary for DevOps/SRE work I typically engage in.   
 
 # Prerequisite 
-1. Install and configure Git For Windows: https://gitforwindows.org/
+1. Install and configure [Git For Windows](https://gitforwindows.org/)
 2. Clone this repo and run script
 	
 # Run
