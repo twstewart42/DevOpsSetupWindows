@@ -20,6 +20,7 @@ if [ ! -f "/usr/local/bin/pipenv" ]; then
 	pip3 install -U pip
 	pip3 install -U pipenv
 	# https://pipenv.pypa.io/en/latest/installation.html
+	pip3 install -U ansible
 fi
 
 
