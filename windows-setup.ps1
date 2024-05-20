@@ -74,7 +74,7 @@ scoop_install cowsay https://raw.githubusercontent.com/ScoopInstaller/Main/maste
 scoop_install aws https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/aws.json aws.exe elephant
 scoop_install aws-vault https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/aws-vault.json aws-vault.exe koala
 scoop_install dos2unix https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/dos2unix.json dos2unix.exe tux
-
+scoop_install direnv https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/direnv.json direnv.exe moose
 scoop_install go https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/go.json go.exe cower
 scoop_install helm https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/helm.json helm.exe surgery
 scoop_install jq https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/jq.json jq.exe stegosaurus
