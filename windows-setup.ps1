@@ -72,9 +72,9 @@ function download_install($name, $url, $check, $cow) {
 # Keep in Alphabetical Order please, except Cowsay must be first, since we use it within this script for added flavor
 scoop_install cowsay https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/cowsay.json cowsay.ps1 default
 scoop_install aws https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/aws.json aws.exe elephant
+scoop_install aws-vault https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/aws-vault.json aws-vault.exe koala
 scoop_install dos2unix https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/dos2unix.json dos2unix.exe tux
-# have to reference exact commit for latest dotnet package to avoid updating to 5.X or 6.X unexpectedly
-scoop_install dotnet https://raw.githubusercontent.com/ScoopInstaller/Main/cb99ded87a807bd4764f785a407e54174c2d5f82/bucket/dotnet-sdk.json dotnet.exe tux
+
 scoop_install go https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/go.json go.exe cower
 scoop_install helm https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/helm.json helm.exe surgery
 scoop_install jq https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/jq.json jq.exe stegosaurus
@@ -83,7 +83,6 @@ scoop_install kubectx https://raw.githubusercontent.com/ScoopInstaller/Main/mast
 scoop_install k3sup https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/k3sup.json k3sup.exe beavis.zen
 scoop_install packer https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/packer.json packer.exe luke-koala
 scoop_install python3 https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/python.json python.exe dragon
-scoop_install saml2aws https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/saml2aws.json saml2aws.exe koala
 scoop_install starship https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/starship.json starship.exe kiss
 scoop_install terraform https://raw.githubusercontent.com/se35710/scoop-main/master/bucket/terraform.json terraform.exe cheese
 scoop_install tflint https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/tflint.json tflint.exe moose
@@ -94,7 +93,8 @@ download_install VSCode 'https://code.visualstudio.com/sha/download?build=stable
 
 github_latest_install rancher-desktop https://api.github.com/repos/rancher-sandbox/rancher-desktop/releases/latest "$appdata_path\Programs\Rancher Desktop\Rancher Desktop.exe" msi small
 github_latest_install winget https://api.github.com/repos/microsoft/winget-cli/releases/latest winget.exe msixbundle eyes
-github_latest_install winterm https://api.github.com/repos/microsoft/terminal/releases/latest wt.exe msixbundle moofasa
+# terminal comes pre-installed now on Windows 11
+# github_latest_install winterm https://api.github.com/repos/microsoft/terminal/releases/latest wt.exe msixbundle moofasa
 
 ## Install WSL2
 function wsl_install() {
