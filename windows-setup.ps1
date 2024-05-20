@@ -92,7 +92,7 @@ scoop_install vim https://raw.githubusercontent.com/ScoopInstaller/Main/master/b
 
 download_install VSCode 'https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user' code.cmd moose
 
-github_latest_install rancher-desktop https://api.github.com/repos/rancher-sandbox/rancher-desktop/releases/latest "$appdata_path\Programs\Rancher Desktop\Rancher Desktop.exe" exe small
+github_latest_install rancher-desktop https://api.github.com/repos/rancher-sandbox/rancher-desktop/releases/latest "$appdata_path\Programs\Rancher Desktop\Rancher Desktop.exe" msi small
 github_latest_install winget https://api.github.com/repos/microsoft/winget-cli/releases/latest winget.exe msixbundle eyes
 github_latest_install winterm https://api.github.com/repos/microsoft/terminal/releases/latest wt.exe msixbundle moofasa
 

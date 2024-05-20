@@ -10,6 +10,8 @@ if [ "$EUID" -eq 0 ]
   exit
 fi
 
+mkdir -p $HOME/bin
+
 git_username=$1
 git_email=$2
 if [[ -z $(git config --get user.name) ]]; then
@@ -54,9 +56,17 @@ fi
 #WSL GIT config
 # https://docs.microsoft.com/en-us/windows/wsl/tutorials/wsl-git
 # Set Git inside WSL to use windows credentials manager which works well with enterprise SSO systems
-if [[ -z $(git config --get credential.helper) ]]; then 
-	git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-manager-core.exe"
-	git config --global credential.https://dev.azure.com.useHttpPath true
+# if [[ -z $(git config --get credential.helper) ]]; then 
+# 	git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-manager-core.exe"
+# 	git config --global credential.https://dev.azure.com.useHttpPath true
+# fi
+
+# pyenv install 
+if [[ -z $(which pyenv) ]]; then
+	curl https://pyenv.run | bash
+	echo "pyenv install complete" | cowsay -f dragon
+else
+	echo "pyenv already installed and in path" | cowsay -f dragon
 fi
 
 # main installer block for asdf-vm plugins
@@ -66,6 +76,7 @@ asdf_install() {
 	# $2 == asdf plugin version
 	# $3 == cowsay graphic
 	# $4 == alt binary name*
+	# $5 == alt plugin URL*
 	# *Some packages have different names than the binary we need to 
 	# verify to see if the utility is not already installed
 	# golang vs go, dotnet-core vs dotnet
@@ -75,7 +86,11 @@ asdf_install() {
 		util=$4
 	fi
 	if [[ -z $(which $util) ]]; then
-		asdf plugin add $1
+		if [[ -z $5 ]]; then
+			asdf plugin add $1
+		else
+			asdf plugin add $5
+		fi
 		asdf install $1 $2
 		full_version=$(asdf list $1 | sort -r | head -n 1)
 		asdf global $1 $full_version
@@ -84,6 +99,7 @@ asdf_install() {
 		echo "${1} already installed and in path" | cowsay -f $3
 	fi
 }
+
 
 #For AWS CLI we want to ensure everyone has the newer v2 cli
 if [[ -z $(which aws) && ! -z $(aws --version | grep -v aws-cli/2) ]]; then
@@ -96,26 +112,19 @@ else
 fi
 
 # Keep in Alphabetical Order Please
-asdf_install dotnet-core latest:3.1 tux dotnet
+asdf_install aws-vault latest flaming-sheep aws-vault https://github.com/karancode/asdf-aws-vault.git
 asdf_install golang latest ghostbusters go
 asdf_install helm latest turkey
 asdf_install kubectl latest flaming-sheep
 asdf_install kubectx latest hellokitty
 asdf_install k3sup latest bunny
-asdf_install packer 1.5.1 kosh
-asdf_install saml2aws latest kangaroo
+asdf_install k9s latest bunny
+asdf_install packer latest kosh
 asdf_install starship latest vader
 asdf_install terraform latest bud-frogs
-asdf_install terraform-docs 0.15.0 www
-asdf_install tflint 0.21.0 turtle
-asdf_install tfsec 0.58.9 stimpy
-
-#podman rootless config
-if [[ ! -f $HOME/.config/containers/libpod.conf ]]; then
-	podman info
-	sed -i 's/cgroup_manager = "systemd"/cgroup_manager = "cgroupfs"/g' $HOME/.config/containers/libpod.conf
-	sed -i 's/# events_logger = "journald"/events_logger = "file/g' $HOME/.config/containers/libpod.conf
-fi
+asdf_install terraform-docs latest www
+asdf_install tflint latest turtle
+asdf_install tfsec latest stimpy
 
 # Configure Shells for a beautiful CLI experience
 # https://starship.rs/
@@ -133,25 +142,54 @@ if [[ -z $(grep starship $HOME/.zshrc) ]]; then
 	echo "Adding the following to .zshrc:"
 	cat <<EOF >> $HOME/.zshrc
 plugins=(git asdf helm kubectl kubectx aws aliases battery gnu-utils history man python pylint pyenv terraform ubuntu)
-eval "$(saml2aws --completion-script-zsh)"
+# for ansible set LANG to C.UTF-8
+export LANG=C.UTF-8 
 export EDITOR="vim"
+export GPG_TTY=$(tty)
+export AWS_VAULT_BACKEND=pass
+export AWS_PAGER=""
+export AWS_SESSION_TOKEN_TTL=8h
+export AWS_CHAINED_SESSION_TOKEN_TTL=8h
+export AWS_ASSUME_ROLE_TTL=8h
+alias vzsh="vim $HOME/.zshrc && source $HOME/.zshrc"
 alias fdate="sudo ntpdate pool.ntp.org"
 alias k="kubectl"
 alias kx="kubectx"
+alias tf="terraform
 alias g="git"
 alias ga="git add"
 alias gb="git branch"
+alias gbn="git checkout -b"
 alias gbd="git branch -D"
 alias gci"git commit"
 alias gco"git checkout"
 alias gp="git push"
 alias gt="git tag"
-alias docker="podman"
+# fluxcd
+source <(flux completion zsh)
+## functions
+function ave(){
+  export AWS_VAULT=""
+  aws-vault exec $1
+}
+function setup-ansible() {
+  eval `ssh-agent`
+  ssh-add ~/.ssh/ubuntu-ansible
+  export ANSIBLE_VAULT_PASSWORD_FILE=$HOME/bin/get-vault-pass
+}
 EOF
 fi
 if [[ ! -f $HOME/.config/starship.toml ]]; then
 	cp ./starship.toml $HOME/.config/starship.toml
 fi
 
+
+if [[ ! -f $HOME/bin/get-vault-pass ]]; then
+	cat <<EOF >> $HOME/bin/get-vault-pass
+#!/bin/bash
+pass munilink/ansible-vault-password
+EOF
+	chmod +x $HOME/bin/get-vault-pass
+fi
 
 echo "All done" | cowsay
