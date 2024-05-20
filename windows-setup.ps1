@@ -11,7 +11,7 @@
 #>
 
 
-$wsl_distro = "Ubuntu-20.04"
+$wsl_distro = "Ubuntu-22.04"
 $appdata_path = $env:LOCALAPPDATA
 
 ## Install Scoop

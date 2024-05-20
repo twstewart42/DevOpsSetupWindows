@@ -1,13 +1,18 @@
 {
     "recommendations": [
-        "ms-kubernetes-tools.vscode-kubernetes-tools",
-        "4ops.packer",
         "ms-vscode.powershell",
         "ms-python.python",
         "ms-vscode-remote.remote-containers",
         "ms-vscode-remote.remote-wsl",
+        "ms-vscode-remote.remote-ssh",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
         "redhat.vscode-yaml",
-        "4ops.terraform",
-        "eamodio.gitlens"
+        "hashicorp.terraform",
+        "4ops.packer",
+        "redhat.ansible",
+        "yzhang.markdown-all-in-one",
+        "streetsidesoftware.code-spell-checker",
+        "jsynowiec.vscode-insertdatestring",
+        "AquaSecurityOfficial.trivy-vulnerability-scanner"
     ]
 }
