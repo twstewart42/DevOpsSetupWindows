@@ -27,6 +27,8 @@ if [ ! -f "$HOME/.local/bin/pipenv" ]; then
 	pip3 install -U --user pipenv
 	# https://pipenv.pypa.io/en/latest/installation.html
 	pip3 install -U --user ansible
+	pip3 install -U --user boto3
+	pip3 install -U --user checkov
 	pip3 install -U --user pre-commit
 fi
 
