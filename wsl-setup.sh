@@ -22,7 +22,7 @@ if [[ -z $(git config --get user.email) ]]; then
 fi
 
 # python utilities
-if [ ! -f "/usr/local/bin/pipenv" ]; then
+if [ ! -f "$HOME/.local/bin/pipenv" ]; then
 	pip3 install -U --user pip
 	pip3 install -U --user pipenv
 	# https://pipenv.pypa.io/en/latest/installation.html
