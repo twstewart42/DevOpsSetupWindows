@@ -21,6 +21,15 @@ if [[ -z $(git config --get user.email) ]]; then
 	git config --global user.email $git_email
 fi
 
+# python utilities
+if [ ! -f "/usr/local/bin/pipenv" ]; then
+	pip3 install -U --user pip
+	pip3 install -U --user pipenv
+	# https://pipenv.pypa.io/en/latest/installation.html
+	pip3 install -U --user ansible
+	pip3 install -U --user pre-commit
+fi
+
 # ASDF Install to bash
 if [[ -z $(asdf version) && ! -f "$HOME/.asdf/asdf.sh" ]]; then
 	echo "install and config ASDF"

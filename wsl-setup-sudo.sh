@@ -16,14 +16,6 @@ sudo apt-get -y upgrade
 sudo apt-get install -qq -y vim pass gpg
 sudo apt-get install -qq -y curl git jq cowsay fortune
 sudo apt-get install -qq -y python3-pip 
-if [ ! -f "/usr/local/bin/pipenv" ]; then
-	pip3 install -U pip
-	pip3 install -U pipenv
-	# https://pipenv.pypa.io/en/latest/installation.html
-	pip3 install -U ansible
-	pip3 install -U pre-commit
-fi
-
 
 # flux install
 # curl -s https://fluxcd.io/install.sh | sudo bash
