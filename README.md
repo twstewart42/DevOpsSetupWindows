@@ -5,7 +5,7 @@ I got tired of repeating the same steps anytime I needed to start fresh on a new
 
 # DESCRIPTION
 Installs git, WSL2, [scoop](https://scoop.sh/), python3, docker desktop, VSC, Win Terminal, and more.  
-Within WSL2/Ubuntu 20.04 configures and installs [ASDF](https://asdf-vm.com/), [direnv](https://direnv.net/), and all utilities necessary for DevOps/SRE work I typically engage in.   
+Within WSL2/Ubuntu 22.04 configures and installs [ASDF](https://asdf-vm.com/), [direnv](https://direnv.net/), and all utilities necessary for DevOps/SRE work I typically engage in.   
 
 # Prerequisite 
 1. Install and configure [Git For Windows](https://gitforwindows.org/)
