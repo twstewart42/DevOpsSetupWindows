@@ -10,6 +10,7 @@ zsh = true
 [tools]
 awscli = "latest"
 azure-cli = "latest"
+azure-kubelogin = "latest"
 direnv = "latest"
 dotnet = "lts"
 go = "latest"
