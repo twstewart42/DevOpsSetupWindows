@@ -1,7 +1,7 @@
 # SYNOPSIS
 Set up a Windows + WSL2 DevOps workstation in minutes, with a little help from Cowsay.
 
-Tooling lives **only inside WSL (Ubuntu 24.04)**. Tool versions are declared in one file, [`config/mise.toml`](config/mise.toml), managed by [mise](https://mise.jdx.dev/). Python uses [uv](https://docs.astral.sh/uv/), containers use rootless [podman](https://podman.io/).
+The same DevOps tools are installed **natively on Windows and inside WSL (Ubuntu 24.04)** from one file, [`config/mise.toml`](config/mise.toml), managed by [mise](https://mise.jdx.dev/). Python uses [uv](https://docs.astral.sh/uv/), containers use [podman](https://podman.io/) + Podman Desktop.
 
 # Prerequisite
 1. Install [Git for Windows](https://gitforwindows.org/)
@@ -12,7 +12,12 @@ From the repo root in a user-level PowerShell:
 ```pwsh
 PS> .\windows-setup.ps1
 ```
-This installs WSL2 + Ubuntu 24.04, VS Code (with recommended extensions) and Windows Terminal via winget, then runs `wsl-setup.sh` inside WSL. Re-running is safe.
+This installs mise, the AWS CLI, VS Code (with recommended extensions), Windows Terminal, Podman and Podman Desktop via winget,
+installs the `config/mise.toml` tools natively on Windows (mise's shims directory, `%LOCALAPPDATA%\mise\shims`, is added to your
+user PATH so they work in PowerShell, cmd and VS Code), sets up WSL2 + Ubuntu 24.04, then runs `wsl-setup.sh` inside WSL. Re-running is safe.
+
+A few tools are limited to Linux with `os = ["linux", "macos"]` in `config/mise.toml`: ansible (no Windows control node)
+and awscli (installed on Windows via winget instead).
 
 On a machine without WSL, the first run installs it and stops: reboot if prompted, launch Ubuntu 24.04 once to create your Linux user, then run `.\windows-setup.ps1` again.
 
@@ -26,9 +31,10 @@ mise upgrade     # bump anything set to "latest"
 ```
 If the repo is cloned inside WSL, `config/` files are symlinked into `~/.config`, so edits apply immediately.
 If it lives on the Windows drive (`/mnt/c/...`), they are copied instead; re-run `./wsl-setup.sh` after editing them.
+On Windows the config is copied to `~\.config\mise\config.toml`; re-run `.\windows-setup.ps1` after editing it.
 
 # Azure
-The Azure CLI (`az`) is managed by mise, and `wsl-setup.sh` adds the `azure-devops` extension
+The Azure CLI (`az`) is managed by mise on both Windows and WSL, and both setup scripts add the `azure-devops` extension
 (`az repos`, `az boards`, `az pipelines`). Sign in once and set your org defaults:
 ```sh
 az login

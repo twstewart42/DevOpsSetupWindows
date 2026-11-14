@@ -7,10 +7,14 @@
 [bootstrap.mise_shell_activate]
 zsh = true
 
+# Shared by WSL (wsl-setup.sh) and Windows (windows-setup.ps1). Tools limited with
+# os = [...] don't run natively on Windows: ansible has no Windows control node, and
+# awscli has no Windows build here (windows-setup.ps1 installs it via winget instead).
+# ansible pins Python 3.13: ansible-core crashes on 3.15 (dataclasses._is_type removed).
 [tools]
-ansible = "latest"
-ansible-core = "latest"
-awscli = "latest"
+ansible = { version = "latest", os = ["linux", "macos"], uvx_args = "--python 3.13" }
+ansible-core = { version = "latest", os = ["linux", "macos"], uvx_args = "--python 3.13" }
+awscli = { version = "latest", os = ["linux", "macos"] }
 azure-cli = "latest"
 azure-kubelogin = "latest"
 direnv = "latest"
@@ -28,8 +32,12 @@ powershell-core = "latest"
 ripgrep = "latest"
 saml2aws = "latest"
 starship = "latest"
+stern = "latest"
 terraform = "latest"
 terraform-docs = "latest"
 tflint = "latest"
 tfsec = "latest"
+tmux = "latest"
 uv = "latest"
+vim = "latest"
+vscode-clie = "latest"

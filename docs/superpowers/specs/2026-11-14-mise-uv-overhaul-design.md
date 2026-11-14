@@ -11,7 +11,9 @@ for asdf/pipenv/Ubuntu 20.04 and anything already broken.
 ## Goals
 - `config/mise.toml` is the single source of truth for CLI tool versions.
 - uv replaces pip/pipenv for Python (interpreter + project envs).
-- WSL (Ubuntu 24.04) is the only home for DevOps tooling.
+- The same mise tools are installed natively on Windows and in WSL (Ubuntu 24.04) from
+  `config/mise.toml`; Windows-incompatible tools use `os = ["linux", "macos"]`.
+  (Revised 2026-11-14 at user request; originally WSL-only.)
 - Podman is the container runtime: Podman + Podman Desktop on Windows (winget) run a rootful
   `podman-machine-default`; Ubuntu's apt podman CLI connects to that machine's socket under
   `/mnt/wsl/podman-sockets/` (falls back to local podman if absent). `docker` aliased to podman.
@@ -19,7 +21,7 @@ for asdf/pipenv/Ubuntu 20.04 and anything already broken.
 - Scripts are idempotent and much shorter than today (~590 lines -> well under half).
 
 ## Non-goals / anti-goals
-- No Windows-native installs of DevOps CLIs (scoop tool list removed).
+- No scoop; Windows-native tools come from the same mise config, not a separate list.
 - No Docker Desktop or Rancher Desktop.
 - No chezmoi/Ansible; no new framework for teammates to learn.
 - Don't hide versions inside script logic again.

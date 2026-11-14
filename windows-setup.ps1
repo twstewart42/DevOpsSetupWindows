@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-	Bootstrap WSL2 + GUI apps on Windows, then configure tooling inside WSL.
+	Set up DevOps tooling on Windows and in WSL2 from one mise config.
 .DESCRIPTION
-	DevOps CLIs live only in WSL (see config/mise.toml). This script installs
-	WSL (Ubuntu 24.04), VS Code, Windows Terminal, recommended VS Code
-	extensions, and runs wsl-setup.sh.
+	Installs the DevOps CLIs from config/mise.toml natively with mise, plus WSL
+	(Ubuntu 24.04), VS Code, Windows Terminal, Podman + Podman Desktop and
+	recommended VS Code extensions, then runs wsl-setup.sh inside WSL.
 .NOTES
 	Run from the repo root in a user-level PowerShell. Prerequisite: Git for Windows.
 .EXAMPLE
@@ -36,8 +36,11 @@ function Install-Wsl {
 	}
 }
 
-function Install-GuiApps {
-	foreach ($id in 'Microsoft.VisualStudioCode', 'Microsoft.WindowsTerminal', 'RedHat.Podman', 'RedHat.Podman-Desktop') {
+function Install-WingetPackages {
+	# Amazon.AWSCLI: mise's awscli has no Windows build (AWS ships an MSI), see config/mise.toml
+	$ids = 'jdx.mise', 'Amazon.AWSCLI', 'Microsoft.VisualStudioCode', 'Microsoft.WindowsTerminal',
+		'RedHat.Podman', 'RedHat.Podman-Desktop'
+	foreach ($id in $ids) {
 		winget list --id $id --exact | Out-Null
 		if ($LASTEXITCODE -ne 0) {
 			winget install --id $id --exact --silent --accept-package-agreements --accept-source-agreements
@@ -48,6 +51,48 @@ function Install-GuiApps {
 	# Pick up PATH changes (e.g. `code`) from installs made in this session
 	$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
 		[Environment]::GetEnvironmentVariable('Path', 'User')
+}
+
+# Copy-MiseConfig <src> <dest>: copy the repo config over dest, backing up a
+# differing user file once. (Copy, not symlink: symlinks need admin/dev mode.)
+function Copy-MiseConfig([string]$Src, [string]$Dest) {
+	New-Item -ItemType Directory -Force (Split-Path $Dest) | Out-Null
+	if ((Test-Path $Dest) -and !(Test-Path "$Dest.bak") -and
+		(Get-FileHash $Src).Hash -ne (Get-FileHash $Dest).Hash) {
+		Move-Item $Dest "$Dest.bak"
+	}
+	Copy-Item $Src $Dest -Force
+}
+
+# Add-PathEntry <path> <entry>: return the ;-separated path with entry appended
+# unless already present (case and trailing-slash insensitive).
+function Add-PathEntry([string]$Path, [string]$Entry) {
+	$parts = @($Path -split ';' | Where-Object { $_ })
+	$norm = { param($p) $p.TrimEnd('\').ToLowerInvariant() }
+	if ($parts | Where-Object { (& $norm $_) -eq (& $norm $Entry) }) { return $Path }
+	return (@($parts) + $Entry) -join ';'
+}
+
+# Install the same tools as WSL, natively, and put mise's shims on the user PATH
+# so they work in PowerShell, cmd and VS Code.
+function Install-MiseTools {
+	if (!(Get-Command mise -ErrorAction SilentlyContinue)) {
+		Write-Warning 'mise not on PATH yet; open a new terminal and re-run to install the DevOps tools.'
+		return
+	}
+	Copy-MiseConfig (Join-Path $PSScriptRoot 'config\mise.toml') (Join-Path $HOME '.config\mise\config.toml')
+	mise install --yes
+	$shims = Join-Path $env:LOCALAPPDATA 'mise\shims'
+	$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+	$newPath = Add-PathEntry $userPath $shims
+	if ($newPath -ne $userPath) {
+		[Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+		$env:Path = Add-PathEntry $env:Path $shims
+	}
+	mise exec -- az extension show --name azure-devops 2>$null | Out-Null
+	if ($LASTEXITCODE -ne 0) {
+		mise exec -- az extension add --name azure-devops --only-show-errors
+	}
 }
 
 function Install-VscodeExtensions {
@@ -96,20 +141,26 @@ function Set-GitIdentity {
 	}
 }
 
-Install-Wsl
-Install-GuiApps
-Install-VscodeExtensions
-Set-GitIdentity
+function Invoke-Main {
+	Install-Wsl
+	Install-WingetPackages
+	Install-MiseTools
+	Install-VscodeExtensions
+	Set-GitIdentity
 
-if ($script:WslJustInstalled) {
-	Write-Output "WSL and $WslDistro were just installed. Reboot if prompted, launch '$WslDistro' once"
-	Write-Output 'to create your Linux user, then re-run .\windows-setup.ps1 to finish setup.'
-	exit 0
+	if ($script:WslJustInstalled) {
+		Write-Output "WSL and $WslDistro were just installed. Reboot if prompted, launch '$WslDistro' once"
+		Write-Output 'to create your Linux user, then re-run .\windows-setup.ps1 to finish setup.'
+		exit 0
+	}
+
+	Start-PodmanMachine
+
+	Write-Output 'Configuring WSL...'
+	$wslArgs = @($script:GitName, $script:GitEmail) | Where-Object { $_ }
+	# --exec skips the Linux shell so arguments with spaces (e.g. "First Last") stay intact
+	wsl -d $WslDistro --exec bash wsl-setup.sh @wslArgs
 }
 
-Start-PodmanMachine
-
-Write-Output 'Configuring WSL...'
-$wslArgs = @($script:GitName, $script:GitEmail) | Where-Object { $_ }
-# --exec skips the Linux shell so arguments with spaces (e.g. "First Last") stay intact
-wsl -d $WslDistro --exec bash wsl-setup.sh @wslArgs
+# Dot-sourcing (tests) loads the functions without running setup
+if ($MyInvocation.InvocationName -ne '.') { Invoke-Main }
