@@ -71,6 +71,7 @@ set_git_identity() {
 	git config --global alias.pl pull
 	git config --global alias.pu push
 	git config --global alias.unstage reset HEAD --
+	git config --global --add --bool push.autoSetupRemote true
 }
 
 # Use the Windows Git credential manager (works with enterprise SSO).
