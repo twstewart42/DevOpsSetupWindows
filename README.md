@@ -1,6 +1,8 @@
 # SYNOPSIS
 Set up a Windows + WSL2 DevOps workstation in minutes, with a little help from Cowsay.
 
+This project is heavily opinionated for what **I** want to install and manage. feel free to reuse and adjust for your own unique setup.
+
 The same DevOps tools are installed **natively on Windows and inside WSL (Ubuntu 24.04)** from one file, [`config/mise.toml`](config/mise.toml), managed by [mise](https://mise.jdx.dev/). Python uses [uv](https://docs.astral.sh/uv/), containers use [podman](https://podman.io/) + Podman Desktop.
 
 # Prerequisite
@@ -39,14 +41,6 @@ Both setup scripts install [`config/gitignore_global`](config/gitignore_global) 
 Terraform state, `.env` files and editor/OS cruft. If you have a custom `core.excludesFile`, the scripts warn
 because it overrides that path. Project-specific rules still belong in each repo's own `.gitignore`.
 
-# Azure
-The Azure CLI (`az`) is managed by mise on both Windows and WSL, and both setup scripts add the `azure-devops` extension
-(`az repos`, `az boards`, `az pipelines`). Sign in once and set your org defaults:
-```sh
-az login
-az devops configure --defaults organization=https://dev.azure.com/<your-org> project=<your-project>
-```
-Git over HTTPS to Azure Repos uses the Windows Git Credential Manager configured by `wsl-setup.sh`.
 
 # Python with uv
 ```sh
