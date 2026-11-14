@@ -34,6 +34,10 @@ check "git identity set from args"   '[[ $(git config --global user.name) == Ann
 check "refuses root"                 '[[ $rc -ne 0 ]]'
 ( require_non_root 1000 ); rc=$?
 check "allows normal user"           '[[ $rc -eq 0 ]]'
+# docker shim: executable, LF-only, forwards args to podman
+check "docker shim executable"       '[[ -x "$repo/bin/docker" ]]'
+check "docker shim has no CRLF"      '! grep -q $'"'"'\r'"'"' "$repo/bin/docker"'
+check "docker shim forwards args"    '[[ $(PATH="$tmp/fakebin:$PATH"; mkdir -p "$tmp/fakebin"; printf "#!/bin/sh\necho podman \"\$@\"\n" > "$tmp/fakebin/podman"; chmod +x "$tmp/fakebin/podman"; "$repo/bin/docker" run -it "a b") == "podman run -it a b" ]]'
 # credential helper skipped when path missing
 GIT_ROOT="$tmp/nope" set_credential_helper 2>/dev/null
 check "no dead credential helper"    '[[ -z $(git config --global credential.helper) ]]'

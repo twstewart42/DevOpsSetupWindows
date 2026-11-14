@@ -1,0 +1,4 @@
+#!/bin/bash
+# docker -> podman shim, so scripts and tools that call `docker` (not just
+# interactive shells) use podman. Installed to ~/.local/bin by wsl-setup.sh.
+exec podman "$@"

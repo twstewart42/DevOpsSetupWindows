@@ -61,7 +61,8 @@ uv run python main.py
 starts a rootful Podman machine (`podman-machine-default`). `wsl-setup.sh` points Ubuntu's `podman` CLI at that
 machine (`/mnt/wsl/podman-sockets/podman-machine-default/`), so containers you run from WSL show up in Podman Desktop.
 If the machine isn't running when `wsl-setup.sh` runs, Ubuntu falls back to its own local podman; start the machine
-and re-run `./wsl-setup.sh` to connect. `docker` is aliased to `podman` (see `config/aliases.sh`).
+and re-run `./wsl-setup.sh` to connect. `docker` runs `podman` via a shim in `~/.local/bin` (see [`bin/docker`](bin/docker)), so scripts and tools
+that call `docker` work too, not just interactive shells.
 
 If the machine is rootful (Podman Desktop's default), the script adds you to group 10 (`uucp`); open a new
 WSL session afterwards. Check with `podman system connection list` and `podman run quay.io/podman/hello`.

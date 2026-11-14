@@ -171,6 +171,8 @@ main() {
 	install_config "$REPO_DIR/config/mise.toml" "$HOME/.config/mise/config.toml"
 	install_config "$REPO_DIR/config/starship.toml" "$HOME/.config/starship.toml"
 	install_config "$REPO_DIR/config/aliases.sh" "$DEVOPS_CONFIG_DIR/aliases.sh"
+	install_config "$REPO_DIR/bin/docker" "$HOME/.local/bin/docker"
+	chmod +x "$HOME/.local/bin/docker"
 	install_git_ignore
 	mise install --yes
 	eval "$(mise env -s bash)" # put mise-managed tools on PATH for the rest of this script
