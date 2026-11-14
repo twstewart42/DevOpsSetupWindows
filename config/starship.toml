@@ -1,8 +1,13 @@
 add_newline = false
 format = """
-[┌──($directory)─($memory_usage)─($time)─>](bold green)
+[┌──($shell)─($directory)─($memory_usage)─($time)─>](bold green)
 [└─>](bold green)$git_branch$aws$python$kubernetes$terraform$character """
 
+[shell]
+bash_indicator = "🅱️"
+zsh_indicator = "🦓"
+powershell_indicator = "🅿️"
+disabled = false
 
 [battery]
 full_symbol = "🔋"
