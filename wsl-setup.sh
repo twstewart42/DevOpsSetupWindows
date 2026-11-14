@@ -109,9 +109,28 @@ connect_podman_desktop() {
 	fi
 }
 
+# Azure DevOps commands (az repos/boards/pipelines) ship as an az extension.
+add_az_devops_extension() {
+	if ! az extension show --name azure-devops >/dev/null 2>&1; then
+		az extension add --name azure-devops --only-show-errors
+	fi
+}
+
+# zsh never reads ~/.profile, so put the mise install dir on PATH for every zsh
+# (the `mise bootstrap` activation blocks call `mise` by name).
+add_zsh_path() {
+	# shellcheck disable=SC2016 # expand at shell startup, not now
+	add_once "$HOME/.zshenv" ".local/bin" 'export PATH="$HOME/.local/bin:$PATH"'
+}
+
+# zsh: mise activation is managed by `mise bootstrap` ([bootstrap.mise_shell_activate]
+# in config/mise.toml). bash: our own line, because bootstrap's bash mode creates
+# ~/.bash_profile, which makes Ubuntu login shells skip ~/.profile and ~/.bashrc.
 wire_shell() {
 	local rc=$1 shell=$2
-	add_once "$rc" "mise activate" "eval \"\$(\$HOME/.local/bin/mise activate $shell)\""
+	if [[ "$shell" == bash ]]; then
+		add_once "$rc" "mise activate" "eval \"\$(\$HOME/.local/bin/mise activate bash)\""
+	fi
 	add_once "$rc" "direnv hook" "eval \"\$(direnv hook $shell)\""
 	add_once "$rc" "STARSHIP_CONFIG" "export STARSHIP_CONFIG=\$HOME/.config/starship.toml"
 	add_once "$rc" "starship init" "eval \"\$(starship init $shell)\""
@@ -133,9 +152,13 @@ main() {
 	install_config "$REPO_DIR/config/starship.toml" "$HOME/.config/starship.toml"
 	install_config "$REPO_DIR/config/aliases.sh" "$DEVOPS_CONFIG_DIR/aliases.sh"
 	mise install --yes
-	mise exec -- uv python install
+	eval "$(mise env -s bash)" # put mise-managed tools on PATH for the rest of this script
+	uv python install
+	add_az_devops_extension
 
 	wire_shell "$HOME/.bashrc" bash
+	add_zsh_path
+	mise bootstrap --only mise-shell-activate --yes # writes the activate block before ours
 	wire_shell "$HOME/.zshrc" zsh
 
 	set_git_identity "${1:-}" "${2:-}"

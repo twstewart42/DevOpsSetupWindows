@@ -27,6 +27,15 @@ mise upgrade     # bump anything set to "latest"
 If the repo is cloned inside WSL, `config/` files are symlinked into `~/.config`, so edits apply immediately.
 If it lives on the Windows drive (`/mnt/c/...`), they are copied instead; re-run `./wsl-setup.sh` after editing them.
 
+# Azure
+The Azure CLI (`az`) is managed by mise, and `wsl-setup.sh` adds the `azure-devops` extension
+(`az repos`, `az boards`, `az pipelines`). Sign in once and set your org defaults:
+```sh
+az login
+az devops configure --defaults organization=https://dev.azure.com/<your-org> project=<your-project>
+```
+Git over HTTPS to Azure Repos uses the Windows Git Credential Manager configured by `wsl-setup.sh`.
+
 # Python with uv
 ```sh
 uv init myproj && cd myproj

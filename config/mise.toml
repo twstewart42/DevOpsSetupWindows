@@ -1,8 +1,15 @@
 # Single source of truth for DevOps tool versions.
 # Linked to ~/.config/mise/config.toml by wsl-setup.sh.
 # Change a version here, then run: mise install
+# zsh activation (~/.zshrc, ~/.zprofile) is applied by: mise bootstrap --only mise-shell-activate
+# bash is wired by wsl-setup.sh instead (bootstrap's bash mode creates ~/.bash_profile,
+# which makes Ubuntu login shells skip ~/.profile and ~/.bashrc).
+[bootstrap.mise_shell_activate]
+zsh = true
+
 [tools]
 awscli = "latest"
+azure-cli = "latest"
 direnv = "latest"
 dotnet = "lts"
 go = "latest"

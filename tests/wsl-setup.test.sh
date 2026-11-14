@@ -92,4 +92,22 @@ check "podman: no group change rootless"  '! grep -q usermod "$calls"'
 check "podman: existing connection kept"  '! grep -q "connection add" "$calls"'
 unset -f podman sudo getent
 
+# add_az_devops_extension: installs azure-devops extension once
+azcalls="$tmp/azcalls"; have_ext=1
+az() { echo "az $*" >> "$azcalls"; [[ "$1 $2" == "extension show" ]] && return $have_ext; return 0; }
+: > "$azcalls"; add_az_devops_extension >/dev/null
+check "az: adds azure-devops extension"   'grep -qF "az extension add --name azure-devops" "$azcalls"'
+: > "$azcalls"; have_ext=0; add_az_devops_extension >/dev/null
+check "az: skips when already installed"  '! grep -q "extension add" "$azcalls"'
+unset -f az
+
+# wire_shell: zsh activation is owned by `mise bootstrap`; bash keeps our line
+wire_shell "$HOME/.zshrc" zsh; wire_shell "$HOME/.bashrc" bash
+check "zsh: no hand-written mise activate" '! grep -q "mise activate" "$HOME/.zshrc"'
+check "bash: mise activate line present"   'grep -q "mise activate bash" "$HOME/.bashrc"'
+check "zsh: still wires starship"          'grep -q "starship init zsh" "$HOME/.zshrc"'
+add_zsh_path; add_zsh_path
+check "zshenv puts ~/.local/bin on PATH"   '[[ $(grep -c "\.local/bin" "$HOME/.zshenv") == 1 ]]'
+check "no ~/.bash_profile created"         '[[ ! -e "$HOME/.bash_profile" ]]'
+
 exit $fails
