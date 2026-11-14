@@ -12,7 +12,10 @@ for asdf/pipenv/Ubuntu 20.04 and anything already broken.
 - `config/mise.toml` is the single source of truth for CLI tool versions.
 - uv replaces pip/pipenv for Python (interpreter + project envs).
 - WSL (Ubuntu 24.04) is the only home for DevOps tooling.
-- Podman (rootless, from Ubuntu apt) is the container runtime; `docker` aliased to it.
+- Podman is the container runtime: Podman + Podman Desktop on Windows (winget) run a rootful
+  `podman-machine-default`; Ubuntu's apt podman CLI connects to that machine's socket under
+  `/mnt/wsl/podman-sockets/` (falls back to local podman if absent). `docker` aliased to podman.
+  (Revised 2026-11-14 at user request.)
 - Scripts are idempotent and much shorter than today (~590 lines -> well under half).
 
 ## Non-goals / anti-goals
@@ -69,6 +72,7 @@ scoop tool list, pipenv, podman kubic-repo + libpod.conf seds, oh-my-zsh
 
 ## Builder's calls (marked as my decisions, not yours)
 - Ubuntu 24.04; merged sudo/non-sudo scripts; single cowsay; oh-my-zsh dropped.
+- Configs are symlinked when the repo is inside WSL, copied when it is on `/mnt/*` (user chose).
 - Pin only where an old pin was deliberate (dotnet 3.1 is EOL: use a current LTS
   unless told otherwise); `latest` elsewhere.
 - Verification: `shellcheck` on scripts, and a run in a fresh Ubuntu 24.04
