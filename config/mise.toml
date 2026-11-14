@@ -1,0 +1,21 @@
+# Single source of truth for DevOps tool versions.
+# Linked to ~/.config/mise/config.toml by wsl-setup.sh.
+# Change a version here, then run: mise install
+[tools]
+awscli = "latest"
+direnv = "latest"
+dotnet = "lts"
+go = "latest"
+helm = "latest"
+jq = "latest"
+k3sup = "latest"
+kubectl = "latest"
+kubectx = "latest"
+packer = "latest"
+saml2aws = "latest"
+starship = "latest"
+terraform = "latest"
+terraform-docs = "latest"
+tflint = "latest"
+tfsec = "latest"
+uv = "latest"
