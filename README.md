@@ -1,32 +1,36 @@
 # SYNOPSIS
-Install and Setup DevOps Utilities that I routinely need on Windows/WSL based development platform...with a lot of help from Cowsay along the way
+Set up a Windows + WSL2 DevOps workstation in minutes, with a little help from Cowsay.
 
-I got tired of repeating the same steps anytime I needed to start fresh on a new machine or get a new member on my team onboard. This takes a few hours of manual work down to a few minutes of casually waiting for things to work.
+Tooling lives **only inside WSL (Ubuntu 24.04)**. Tool versions are declared in one file, [`config/mise.toml`](config/mise.toml), managed by [mise](https://mise.jdx.dev/). Python uses [uv](https://docs.astral.sh/uv/), containers use rootless [podman](https://podman.io/).
 
-# DESCRIPTION
-Installs git, WSL2, [scoop](https://scoop.sh/), python3, docker desktop, VSC, Win Terminal, and more.  
-Within WSL2/Ubuntu 20.04 configures and installs [ASDF](https://asdf-vm.com/), [direnv](https://direnv.net/), and all utilities necessary for DevOps/SRE work I typically engage in.   
+# Prerequisite
+1. Install [Git for Windows](https://gitforwindows.org/)
+2. Clone this repo
 
-# Prerequisite 
-1. Install and configure [Git For Windows](https://gitforwindows.org/)
-2. Clone this repo and run script
-	
 # Run
-
-Open a User Level Powershell window
+From the repo root in a user-level PowerShell:
 ```pwsh
 PS> .\windows-setup.ps1
-...
- __________
-< All done >
- ----------
-        \   ^__^
-         \  (oo)\_______
-            (__)\       )\/\
-                ||----w |
-                ||     ||
+```
+This installs WSL2 + Ubuntu 24.04, VS Code (with recommended extensions) and Windows Terminal via winget, then runs `wsl-setup.sh` inside WSL. Re-running is safe.
 
+Inside an existing WSL Ubuntu you can run just `./wsl-setup.sh [git_name] [git_email]` as your normal user.
+
+# Changing tool versions
+Edit `config/mise.toml`, then:
+```sh
+mise install     # apply pinned versions
+mise upgrade     # bump anything set to "latest"
+```
+`config/mise.toml` is symlinked to `~/.config/mise/config.toml`.
+
+# Python with uv
+```sh
+uv init myproj && cd myproj
+uv add requests
+uv sync          # create/refresh .venv
+uv run python main.py
 ```
 
-That's It! Your computer is now set to checkout code and begin working.   
-For the most part whether you enjoy working within Windows natively or in Linux the tooling is installed in both and you may use whatever assortment is comfortable for your workflow.   
+# Containers
+`podman` runs rootless and `docker` is aliased to it (see `config/aliases.sh`).
