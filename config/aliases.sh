@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Sourced by bash and zsh via wsl-setup.sh
 export EDITOR="vim"
 alias k="kubectl"
