@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2016,SC2034,SC1091
+# shellcheck disable=SC2016,SC2034,SC1091,SC2329,SC2086,SC2317
 # Plain-bash tests for helpers in wsl-setup.sh. Run: bash tests/wsl-setup.test.sh
 set -u
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -61,5 +61,35 @@ install_config "$tmp/repo/a" "$tmp/cp"
 check "copy rerun keeps backup"      '[[ $(cat "$tmp/cp.bak") == mine ]]'
 echo v2 > "$tmp/repo/a"; install_config "$tmp/repo/a" "$tmp/cp"
 check "copy rerun picks up edits"    '[[ $(cat "$tmp/cp") == v2 && $(cat "$tmp/cp.bak") == mine ]]'
+
+# connect_podman_desktop: stub podman/sudo/id and record calls
+calls="$tmp/calls"; conns=""
+podman() { echo "podman $*" >> "$calls"; [[ "$*" == "system connection list"* ]] && printf '%s\n' $conns; return 0; }
+sudo() { echo "sudo $*" >> "$calls"; }
+groupmembers=""
+getent() { echo "uucp:x:10:$groupmembers"; }
+export PODMAN_SOCKET_DIR="$tmp/sockets"; mkdir -p "$PODMAN_SOCKET_DIR"
+mksock() { python3 -c 'import socket,sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$1"; }
+
+: > "$calls"; connect_podman_desktop >/dev/null 2>&1
+check "podman: no socket => no changes"   '! grep -q "connection add" "$calls"'
+
+: > "$calls"; touch "$PODMAN_SOCKET_DIR/podman-root.sock"; connect_podman_desktop >/dev/null 2>&1
+check "podman: plain file is not a socket" '! grep -q "connection add" "$calls"'
+rm "$PODMAN_SOCKET_DIR/podman-root.sock"; mksock "$PODMAN_SOCKET_DIR/podman-root.sock"; mksock "$PODMAN_SOCKET_DIR/podman-user.sock"
+connect_podman_desktop >/dev/null
+check "podman: rootful socket preferred"  'grep -qF "podman system connection add --default podman-machine-default-root unix://$PODMAN_SOCKET_DIR/podman-root.sock" "$calls"'
+check "podman: added to gid 10"           'grep -qF "sudo usermod --append --groups 10" "$calls"'
+: > "$calls"; groupmembers="other,$(whoami)"; connect_podman_desktop >/dev/null
+check "podman: no re-add when in group"   '! grep -q usermod "$calls"'
+groupmembers=""
+
+: > "$calls"; rm "$PODMAN_SOCKET_DIR/podman-root.sock"; connect_podman_desktop >/dev/null
+check "podman: rootless fallback"         'grep -qF "connection add --default podman-machine-default-user unix://$PODMAN_SOCKET_DIR/podman-user.sock" "$calls"'
+check "podman: no group change rootless"  '! grep -q usermod "$calls"'
+
+: > "$calls"; conns="podman-machine-default-user"; connect_podman_desktop >/dev/null
+check "podman: existing connection kept"  '! grep -q "connection add" "$calls"'
+unset -f podman sudo getent
 
 exit $fails

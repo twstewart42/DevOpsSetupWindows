@@ -37,7 +37,7 @@ function Install-Wsl {
 }
 
 function Install-GuiApps {
-	foreach ($id in 'Microsoft.VisualStudioCode', 'Microsoft.WindowsTerminal') {
+	foreach ($id in 'Microsoft.VisualStudioCode', 'Microsoft.WindowsTerminal', 'RedHat.Podman', 'RedHat.Podman-Desktop') {
 		winget list --id $id --exact | Out-Null
 		if ($LASTEXITCODE -ne 0) {
 			winget install --id $id --exact --silent --accept-package-agreements --accept-source-agreements
@@ -66,6 +66,23 @@ function Install-VscodeExtensions {
 	}
 }
 
+# Create and start the Podman machine that Podman Desktop and WSL share.
+# Rootful matches Podman Desktop's default; wsl-setup.sh connects Ubuntu to it.
+function Start-PodmanMachine {
+	if (!(Get-Command podman -ErrorAction SilentlyContinue)) {
+		Write-Warning 'podman not on PATH yet; open a new terminal and re-run to set up the Podman machine.'
+		return
+	}
+	$machines = podman machine list --format '{{.Name}}'
+	if ($machines -notcontains 'podman-machine-default') {
+		Write-Output 'Creating Podman machine (podman-machine-default, rootful)'
+		podman machine init --rootful
+	}
+	if ((podman machine inspect --format '{{.State}}' podman-machine-default) -ne 'running') {
+		podman machine start podman-machine-default
+	}
+}
+
 function Set-GitIdentity {
 	$script:GitName = git config --get user.name
 	$script:GitEmail = git config --get user.email
@@ -89,6 +106,8 @@ if ($script:WslJustInstalled) {
 	Write-Output 'to create your Linux user, then re-run .\windows-setup.ps1 to finish setup.'
 	exit 0
 }
+
+Start-PodmanMachine
 
 Write-Output 'Configuring WSL...'
 $wslArgs = @($script:GitName, $script:GitEmail) | Where-Object { $_ }

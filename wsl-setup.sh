@@ -12,9 +12,9 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_ROOT_DEFAULT="/mnt/c/Program Files/Git"
 DEVOPS_CONFIG_DIR="$HOME/.config/devops"
 
-# require_non_root [euid]: abort when running as root.
+# require_non_root <euid>: abort when running as root.
 require_non_root() {
-	if [[ "${1:-$EUID}" -eq 0 ]]; then
+	if [[ "$1" -eq 0 ]]; then
 		echo "DO NOT run as root/sudo; the script uses sudo itself where needed" >&2
 		exit 1
 	fi
@@ -84,6 +84,31 @@ set_credential_helper() {
 	fi
 }
 
+# Point this distro's podman CLI at Podman Desktop's machine so containers
+# show up in the GUI. Prefers the rootful socket (Podman Desktop's default).
+connect_podman_desktop() {
+	local dir=${PODMAN_SOCKET_DIR:-/mnt/wsl/podman-sockets/podman-machine-default}
+	local name sock
+	if [[ -S "$dir/podman-root.sock" ]]; then
+		name=podman-machine-default-root sock="$dir/podman-root.sock"
+		# the rootful socket is writable by gid 10 (uucp on Ubuntu)
+		# check the group database, not id -G: a fresh add only shows in new sessions
+		if ! getent group 10 | cut -d: -f4 | tr ',' '\n' | grep -qx "$(whoami)"; then
+			sudo usermod --append --groups 10 "$(whoami)"
+			echo "NOTE: added $(whoami) to group 10; open a new WSL session for it to apply"
+		fi
+	elif [[ -S "$dir/podman-user.sock" ]]; then
+		name=podman-machine-default-user sock="$dir/podman-user.sock"
+	else
+		echo "NOTE: Podman Desktop machine not found at $dir. Create/start it in" \
+			"Podman Desktop, then re-run wsl-setup.sh to connect. Using local podman for now."
+		return 0
+	fi
+	if ! podman system connection list --format '{{.Name}}' | grep -qx "$name"; then
+		podman system connection add --default "$name" "unix://$sock"
+	fi
+}
+
 wire_shell() {
 	local rc=$1 shell=$2
 	add_once "$rc" "mise activate" "eval \"\$(\$HOME/.local/bin/mise activate $shell)\""
@@ -94,7 +119,7 @@ wire_shell() {
 }
 
 main() {
-	require_non_root
+	require_non_root "$EUID"
 
 	sudo apt-get update -qq
 	sudo apt-get install -y -qq curl git gpg pass vim cowsay fortune-mod podman uidmap
@@ -115,6 +140,7 @@ main() {
 
 	set_git_identity "${1:-}" "${2:-}"
 	set_credential_helper
+	connect_podman_desktop
 
 	/usr/games/cowsay "All done"
 }
