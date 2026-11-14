@@ -29,11 +29,37 @@ set_git_identity "" ""
 check "git identity skipped on empty" '[[ -z $(git config --global user.name) ]]'
 set_git_identity "Ann" "a@x.io"
 check "git identity set from args"   '[[ $(git config --global user.name) == Ann ]]'
-# root refusal
-out="$(EUID_OVERRIDE=0 bash "$repo/wsl-setup.sh" 2>&1)"; rc=$?
+# root refusal (function only, in a subshell: never runs the real installer)
+( require_non_root 0 ) 2>/dev/null; rc=$?
 check "refuses root"                 '[[ $rc -ne 0 ]]'
+( require_non_root 1000 ); rc=$?
+check "allows normal user"           '[[ $rc -eq 0 ]]'
 # credential helper skipped when path missing
-GCM_DIR="$tmp/nope" set_credential_helper 2>/dev/null
+GIT_ROOT="$tmp/nope" set_credential_helper 2>/dev/null
 check "no dead credential helper"    '[[ -z $(git config --global credential.helper) ]]'
+# credential helper: current Git for Windows location, spaces escaped
+GIT_ROOT="$tmp/Program Files/Git"; mkdir -p "$GIT_ROOT/mingw64/bin"
+touch "$GIT_ROOT/mingw64/bin/git-credential-manager.exe"
+set_credential_helper
+check "helper found in mingw64/bin"  '[[ $(git config --global credential.helper) == *mingw64/bin/git-credential-manager.exe ]]'
+check "helper spaces escaped"        '[[ $(git config --global credential.helper) == *"Program\ Files"* ]]'
+unset GIT_ROOT
+
+# install_config: repo inside WSL => symlink
+REPO_DIR="$tmp/repo"; mkdir -p "$REPO_DIR"; echo v1 > "$REPO_DIR/a"
+install_config "$REPO_DIR/a" "$tmp/linkdest"
+check "linux repo => symlink"        '[[ -L "$tmp/linkdest" ]]'
+# install_config: repo on Windows drive => copy, replacing an old symlink without backup
+REPO_DIR="/mnt/c/fake"
+install_config "$tmp/repo/a" "$tmp/linkdest"
+check "/mnt repo => regular file"    '[[ -f "$tmp/linkdest" && ! -L "$tmp/linkdest" && $(cat "$tmp/linkdest") == v1 ]]'
+check "symlink replaced w/o backup"  '[[ ! -e "$tmp/linkdest.bak" ]]'
+# copy mode: differing user file backed up; identical rerun leaves backup alone
+echo mine > "$tmp/cp"; install_config "$tmp/repo/a" "$tmp/cp"
+check "copy backs up differing file" '[[ $(cat "$tmp/cp.bak") == mine && $(cat "$tmp/cp") == v1 ]]'
+install_config "$tmp/repo/a" "$tmp/cp"
+check "copy rerun keeps backup"      '[[ $(cat "$tmp/cp.bak") == mine ]]'
+echo v2 > "$tmp/repo/a"; install_config "$tmp/repo/a" "$tmp/cp"
+check "copy rerun picks up edits"    '[[ $(cat "$tmp/cp") == v2 && $(cat "$tmp/cp.bak") == mine ]]'
 
 exit $fails

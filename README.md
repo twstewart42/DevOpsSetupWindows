@@ -14,6 +14,8 @@ PS> .\windows-setup.ps1
 ```
 This installs WSL2 + Ubuntu 24.04, VS Code (with recommended extensions) and Windows Terminal via winget, then runs `wsl-setup.sh` inside WSL. Re-running is safe.
 
+On a machine without WSL, the first run installs it and stops: reboot if prompted, launch Ubuntu 24.04 once to create your Linux user, then run `.\windows-setup.ps1` again.
+
 Inside an existing WSL Ubuntu you can run just `./wsl-setup.sh [git_name] [git_email]` as your normal user.
 
 # Changing tool versions
@@ -22,7 +24,8 @@ Edit `config/mise.toml`, then:
 mise install     # apply pinned versions
 mise upgrade     # bump anything set to "latest"
 ```
-`config/mise.toml` is symlinked to `~/.config/mise/config.toml`.
+If the repo is cloned inside WSL, `config/` files are symlinked into `~/.config`, so edits apply immediately.
+If it lives on the Windows drive (`/mnt/c/...`), they are copied instead; re-run `./wsl-setup.sh` after editing them.
 
 # Python with uv
 ```sh

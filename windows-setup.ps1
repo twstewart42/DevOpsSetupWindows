@@ -22,6 +22,9 @@ function Install-Wsl {
 		Write-Output "Installing WSL and $WslDistro"
 		wsl --install -d $WslDistro
 		wsl --set-default $WslDistro
+		# A fresh distro needs a reboot and/or first launch to create the Linux user
+		# before wsl-setup.sh can run, so stop here.
+		$script:WslJustInstalled = $true
 	} else {
 		Write-Output "$WslDistro already installed"
 	}
@@ -42,9 +45,16 @@ function Install-GuiApps {
 			Write-Output "$id already installed"
 		}
 	}
+	# Pick up PATH changes (e.g. `code`) from installs made in this session
+	$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+		[Environment]::GetEnvironmentVariable('Path', 'User')
 }
 
 function Install-VscodeExtensions {
+	if (!(Get-Command code -ErrorAction SilentlyContinue)) {
+		Write-Warning 'VS Code (code) not on PATH yet; open a new terminal and re-run to install extensions.'
+		return
+	}
 	$recommended = (Get-Content '.vscode/extensions.json' | ConvertFrom-Json).recommendations
 	$installed = code --list-extensions
 	foreach ($e in $recommended) {
@@ -74,6 +84,13 @@ Install-GuiApps
 Install-VscodeExtensions
 Set-GitIdentity
 
+if ($script:WslJustInstalled) {
+	Write-Output "WSL and $WslDistro were just installed. Reboot if prompted, launch '$WslDistro' once"
+	Write-Output 'to create your Linux user, then re-run .\windows-setup.ps1 to finish setup.'
+	exit 0
+}
+
 Write-Output 'Configuring WSL...'
 $wslArgs = @($script:GitName, $script:GitEmail) | Where-Object { $_ }
-wsl -d $WslDistro bash wsl-setup.sh @wslArgs
+# --exec skips the Linux shell so arguments with spaces (e.g. "First Last") stay intact
+wsl -d $WslDistro --exec bash wsl-setup.sh @wslArgs

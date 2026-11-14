@@ -9,7 +9,16 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GCM_DIR="${GCM_DIR:-/mnt/c/Program Files/Git/mingw64/libexec/git-core}"
+GIT_ROOT_DEFAULT="/mnt/c/Program Files/Git"
+DEVOPS_CONFIG_DIR="$HOME/.config/devops"
+
+# require_non_root [euid]: abort when running as root.
+require_non_root() {
+	if [[ "${1:-$EUID}" -eq 0 ]]; then
+		echo "DO NOT run as root/sudo; the script uses sudo itself where needed" >&2
+		exit 1
+	fi
+}
 
 # add_once <file> <marker> <line>: append line unless marker already in file.
 add_once() {
@@ -27,6 +36,24 @@ link_config() {
 	ln -s "$src" "$dest"
 }
 
+# copy_config <src> <dest>: copy src over dest; back up a differing user file.
+copy_config() {
+	local src=$1 dest=$2
+	mkdir -p "$(dirname "$dest")"
+	if [[ -L "$dest" ]]; then rm "$dest"
+	elif [[ -f "$dest" ]] && ! cmp -s "$src" "$dest" && [[ ! -e "$dest.bak" ]]; then
+		mv "$dest" "$dest.bak"
+	fi
+	cp "$src" "$dest"
+}
+
+# install_config <src> <dest>: symlink when the repo lives inside WSL; copy
+# when it lives on the Windows drive (/mnt/*) so shells don't depend on the
+# Windows clone. Re-run wsl-setup.sh after editing config/ in that case.
+install_config() {
+	if [[ "$REPO_DIR" == /mnt/* ]]; then copy_config "$1" "$2"; else link_config "$1" "$2"; fi
+}
+
 # set_git_identity <name> <email>: only fills in what is empty and given.
 set_git_identity() {
 	local name=${1:-} email=${2:-}
@@ -40,14 +67,19 @@ set_git_identity() {
 
 # Use the Windows Git credential manager (works with enterprise SSO).
 set_credential_helper() {
-	local helper="$GCM_DIR/git-credential-manager.exe"
-	[[ -f "$helper" ]] || helper="$GCM_DIR/git-credential-manager-core.exe"
-	if [[ ! -f "$helper" ]]; then
-		echo "WARN: Git for Windows credential manager not found in $GCM_DIR; skipping" >&2
+	local root=${GIT_ROOT:-$GIT_ROOT_DEFAULT} helper="" c
+	for c in "$root/mingw64/bin/git-credential-manager.exe" \
+		"$root/mingw64/libexec/git-core/git-credential-manager.exe" \
+		"$root/mingw64/libexec/git-core/git-credential-manager-core.exe"; do
+		if [[ -f "$c" ]]; then helper=$c; break; fi
+	done
+	if [[ -z "$helper" ]]; then
+		echo "WARN: Git for Windows credential manager not found under $root; skipping" >&2
 		return 0
 	fi
 	if [[ -z "$(git config --global --get credential.helper || true)" ]]; then
-		git config --global credential.helper "$helper"
+		# git runs the helper through a shell, so spaces must be escaped
+		git config --global credential.helper "${helper// /\\ }"
 		git config --global credential.https://dev.azure.com.useHttpPath true
 	fi
 }
@@ -58,14 +90,11 @@ wire_shell() {
 	add_once "$rc" "direnv hook" "eval \"\$(direnv hook $shell)\""
 	add_once "$rc" "STARSHIP_CONFIG" "export STARSHIP_CONFIG=\$HOME/.config/starship.toml"
 	add_once "$rc" "starship init" "eval \"\$(starship init $shell)\""
-	add_once "$rc" "config/aliases.sh" ". \"$REPO_DIR/config/aliases.sh\""
+	add_once "$rc" "devops/aliases.sh" "[ -f \"\$HOME/.config/devops/aliases.sh\" ] && . \"\$HOME/.config/devops/aliases.sh\""
 }
 
 main() {
-	if [[ "${EUID_OVERRIDE:-$EUID}" -eq 0 ]]; then
-		echo "DO NOT run as root/sudo; the script uses sudo itself where needed" >&2
-		exit 1
-	fi
+	require_non_root
 
 	sudo apt-get update -qq
 	sudo apt-get install -y -qq curl git gpg pass vim cowsay fortune-mod podman uidmap
@@ -75,8 +104,9 @@ main() {
 	fi
 	export PATH="$HOME/.local/bin:$PATH"
 
-	link_config "$REPO_DIR/config/mise.toml" "$HOME/.config/mise/config.toml"
-	link_config "$REPO_DIR/config/starship.toml" "$HOME/.config/starship.toml"
+	install_config "$REPO_DIR/config/mise.toml" "$HOME/.config/mise/config.toml"
+	install_config "$REPO_DIR/config/starship.toml" "$HOME/.config/starship.toml"
+	install_config "$REPO_DIR/config/aliases.sh" "$DEVOPS_CONFIG_DIR/aliases.sh"
 	mise install --yes
 	mise exec -- uv python install
 
