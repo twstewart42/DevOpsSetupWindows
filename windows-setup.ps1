@@ -53,15 +53,27 @@ function Install-WingetPackages {
 		[Environment]::GetEnvironmentVariable('Path', 'User')
 }
 
-# Copy-MiseConfig <src> <dest>: copy the repo config over dest, backing up a
+# Copy-ConfigFile <src> <dest>: copy the repo config over dest, backing up a
 # differing user file once. (Copy, not symlink: symlinks need admin/dev mode.)
-function Copy-MiseConfig([string]$Src, [string]$Dest) {
+function Copy-ConfigFile([string]$Src, [string]$Dest) {
 	New-Item -ItemType Directory -Force (Split-Path $Dest) | Out-Null
 	if ((Test-Path $Dest) -and !(Test-Path "$Dest.bak") -and
 		(Get-FileHash $Src).Hash -ne (Get-FileHash $Dest).Hash) {
 		Move-Item $Dest "$Dest.bak"
 	}
 	Copy-Item $Src $Dest -Force
+}
+
+# Global gitignore at git's default XDG path (Git for Windows reads
+# ~/.config/git/ignore too). Warn if a custom core.excludesFile overrides it.
+function Install-GitIgnore([string]$RepoDir = $PSScriptRoot, [string]$HomeDir = $HOME) {
+	Copy-ConfigFile (Join-Path $RepoDir 'config/gitignore_global') (Join-Path $HomeDir '.config/git/ignore')
+	if (Get-Command git -ErrorAction SilentlyContinue) {
+		$custom = git config --global --get core.excludesFile
+		if ($custom) {
+			Write-Warning "core.excludesFile=$custom overrides ~/.config/git/ignore; merge it or unset it"
+		}
+	}
 }
 
 # Add-PathEntry <path> <entry>: return the ;-separated path with entry appended
@@ -80,7 +92,7 @@ function Install-MiseTools {
 		Write-Warning 'mise not on PATH yet; open a new terminal and re-run to install the DevOps tools.'
 		return
 	}
-	Copy-MiseConfig (Join-Path $PSScriptRoot 'config\mise.toml') (Join-Path $HOME '.config\mise\config.toml')
+	Copy-ConfigFile (Join-Path $PSScriptRoot 'config\mise.toml') (Join-Path $HOME '.config\mise\config.toml')
 	mise install --yes
 	$shims = Join-Path $env:LOCALAPPDATA 'mise\shims'
 	$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -147,6 +159,7 @@ function Invoke-Main {
 	Install-MiseTools
 	Install-VscodeExtensions
 	Set-GitIdentity
+	Install-GitIgnore
 
 	if ($script:WslJustInstalled) {
 		Write-Output "WSL and $WslDistro were just installed. Reboot if prompted, launch '$WslDistro' once"

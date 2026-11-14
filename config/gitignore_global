@@ -1,0 +1,40 @@
+# Global gitignore, installed to ~/.config/git/ignore (git's default global excludes
+# path) by wsl-setup.sh and windows-setup.ps1. Applies to every repo on this machine.
+# Keep it to things no repo should ever commit; project-specific rules belong in
+# each repo's own .gitignore (e.g. build/, dist/, .vscode/ settings).
+
+# Dependencies / environments
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Terraform working dirs and state (.terraform.lock.hcl stays committed)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+
+# Secrets / local overrides
+.env
+.env.*
+!.env.example
+mise.local.toml
+.mise.local.toml
+
+# Editor / OS cruft
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+
+# Agent scratch space
+.superpowers/

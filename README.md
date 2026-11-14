@@ -33,6 +33,12 @@ If the repo is cloned inside WSL, `config/` files are symlinked into `~/.config`
 If it lives on the Windows drive (`/mnt/c/...`), they are copied instead; re-run `./wsl-setup.sh` after editing them.
 On Windows the config is copied to `~\.config\mise\config.toml`; re-run `.\windows-setup.ps1` after editing it.
 
+# Global gitignore
+Both setup scripts install [`config/gitignore_global`](config/gitignore_global) to `~/.config/git/ignore`
+(Windows and WSL), git's default global excludes file, so every repo ignores `node_modules/`, `.venv/`,
+Terraform state, `.env` files and editor/OS cruft. If you have a custom `core.excludesFile`, the scripts warn
+because it overrides that path. Project-specific rules still belong in each repo's own `.gitignore`.
+
 # Azure
 The Azure CLI (`az`) is managed by mise on both Windows and WSL, and both setup scripts add the `azure-devops` extension
 (`az repos`, `az boards`, `az pipelines`). Sign in once and set your org defaults:

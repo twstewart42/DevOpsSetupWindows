@@ -63,6 +63,14 @@ set_git_identity() {
 	if [[ -n "$email" && -z "$(git config --global --get user.email || true)" ]]; then
 		git config --global user.email "$email"
 	fi
+	git config --global alias.co checkout
+	git config --global alias.ci commit
+	git config --global alias.st status
+	git config --global alias.ad add
+	git config --global alias.br branch
+	git config --global alias.pl pull
+	git config --global alias.pu push
+	git config --global alias.unstage reset HEAD --
 }
 
 # Use the Windows Git credential manager (works with enterprise SSO).
@@ -126,6 +134,17 @@ add_zsh_path() {
 # zsh: mise activation is managed by `mise bootstrap` ([bootstrap.mise_shell_activate]
 # in config/mise.toml). bash: our own line, because bootstrap's bash mode creates
 # ~/.bash_profile, which makes Ubuntu login shells skip ~/.profile and ~/.bashrc.
+# Global gitignore at git's default XDG path (no config needed). A custom
+# core.excludesFile overrides that path, so warn instead of silently doing nothing.
+install_git_ignore() {
+	install_config "$REPO_DIR/config/gitignore_global" "$HOME/.config/git/ignore"
+	local custom
+	custom="$(git config --global --get core.excludesFile || true)"
+	if [[ -n "$custom" ]]; then
+		echo "WARN: core.excludesFile=$custom overrides ~/.config/git/ignore; merge it or unset it" >&2
+	fi
+}
+
 wire_shell() {
 	local rc=$1 shell=$2
 	if [[ "$shell" == bash ]]; then
@@ -151,6 +170,7 @@ main() {
 	install_config "$REPO_DIR/config/mise.toml" "$HOME/.config/mise/config.toml"
 	install_config "$REPO_DIR/config/starship.toml" "$HOME/.config/starship.toml"
 	install_config "$REPO_DIR/config/aliases.sh" "$DEVOPS_CONFIG_DIR/aliases.sh"
+	install_git_ignore
 	mise install --yes
 	eval "$(mise env -s bash)" # put mise-managed tools on PATH for the rest of this script
 	uv python install

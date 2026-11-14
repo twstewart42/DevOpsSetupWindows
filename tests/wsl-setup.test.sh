@@ -110,4 +110,15 @@ add_zsh_path; add_zsh_path
 check "zshenv puts ~/.local/bin on PATH"   '[[ $(grep -c "\.local/bin" "$HOME/.zshenv") == 1 ]]'
 check "no ~/.bash_profile created"         '[[ ! -e "$HOME/.bash_profile" ]]'
 
+# install_git_ignore: global ignore at git's default XDG path, warn if overridden
+REPO_DIR="$tmp/repo"; mkdir -p "$REPO_DIR/config"; echo "node_modules/" > "$REPO_DIR/config/gitignore_global"
+: > "$GIT_CONFIG_GLOBAL"
+out="$(install_git_ignore 2>&1)"
+check "git ignore installed at XDG path"   '[[ $(cat "$HOME/.config/git/ignore") == "node_modules/" ]]'
+check "git ignore: no warning by default"  '[[ -z "$out" ]]'
+git config --global core.excludesFile "$tmp/other"
+out="$(install_git_ignore 2>&1)"
+check "git ignore: warns on excludesFile"  '[[ "$out" == *core.excludesFile* ]]'
+check "real git honors the global ignore"  '(git config --global --unset core.excludesFile; cd "$tmp" && git init -q gi && mkdir -p gi/node_modules && touch gi/node_modules/x && cd gi && [[ -z $(git status --porcelain) ]])'
+
 exit $fails
