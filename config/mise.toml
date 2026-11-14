@@ -8,6 +8,8 @@
 zsh = true
 
 [tools]
+ansible = "latest"
+ansible-core = "latest"
 awscli = "latest"
 azure-cli = "latest"
 azure-kubelogin = "latest"
@@ -20,6 +22,8 @@ k3sup = "latest"
 kubectl = "latest"
 kubectx = "latest"
 packer = "latest"
+powershell-core = "latest"
+ripgrep = "latest"
 saml2aws = "latest"
 starship = "latest"
 terraform = "latest"

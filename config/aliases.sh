@@ -16,7 +16,8 @@ alias gpg2="gpg"
 alias vzsh="vim $HOME/.zshrc && source $HOME/.zshrc"
 alias tf="terraform"
 alias tfdocs-make="terraform-docs markdown table --output-file README.md ."
-
+alias cluade='claude'
+export ANSIBLE_NOCOWS=1
 function gbn(){
   git branch $1 && git checkout $1
 }
