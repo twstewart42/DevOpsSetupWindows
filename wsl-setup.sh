@@ -1,206 +1,192 @@
 #!/bin/bash
 #############################################################################
-# PROGRAM - wsl-setup.sh
-# SYNOPSIS - Install and Setup DevOps Utilities that I routinely need on WSL/Ubuntu Linux based development platform
-# NOTES - This Script Assumes that you have installed WSL and setup a UNIX user account on WSL
-#       - DO NOT RUN AS SUDO, Script must run within your user profile to work correctly
+# wsl-setup.sh [git_name] [git_email]
+# Bootstraps a DevOps toolchain on WSL/Ubuntu 24.04 using mise (CLI tools),
+# uv (python) and rootless podman (containers).
+# Run as your normal user from the repo root. sudo is used only for apt.
+# Tool versions live in config/mise.toml. Safe to re-run.
 #############################################################################
-if [ "$EUID" -eq 0 ]
-  then echo "DO NOT run script as root/sudo" | /usr/games/cowsay -f ren
-  exit
-fi
+set -euo pipefail
 
-mkdir -p $HOME/bin
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_ROOT_DEFAULT="/mnt/c/Program Files/Git"
+DEVOPS_CONFIG_DIR="$HOME/.config/devops"
 
-git_username=$1
-git_email=$2
-if [[ -z $(git config --get user.name) ]]; then
-	git config --global user.name $git_username
-fi
-if [[ -z $(git config --get user.email) ]]; then
-	git config --global user.email $git_email
-fi
-
-# python utilities
-if [ ! -f "$HOME/.local/bin/pipenv" ]; then
-	pip3 install -U --user pip
-	pip3 install -U --user pipenv
-	# https://pipenv.pypa.io/en/latest/installation.html
-	pip3 install -U --user ansible
-	pip3 install -U --user boto3
-	pip3 install -U --user checkov
-	pip3 install -U --user pre-commit
-fi
-
-# ASDF Install to bash
-if [[ -z $(asdf version) && ! -f "$HOME/.asdf/asdf.sh" ]]; then
-	echo "install and config ASDF"
-	git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.8.1
-	echo ". $HOME/.asdf/asdf.sh" | tee -a $HOME/.bashrc
-	echo ". $HOME/.asdf/asdf.sh" | tee -a $HOME/.zshrc
-	echo ". $HOME/.asdf/completions/asdf.bash" | tee -a $HOME/.bashrc
-	source $HOME/.asdf/asdf.sh
-	source $HOME/.asdf/completions/asdf.bash
-else
-	# need to load asdf into local session ENV or things don't work running this script from Windows passing into WSL
-	echo "ASDF already installed"
-	source $HOME/.asdf/asdf.sh
-	source $HOME/.asdf/completions/asdf.bash
-	asdf version
-fi
-
-#direnv Install to bash 
-if [[ -z $(direnv --version) ]]; then
-	echo "Install and config direnv"
-	asdf plugin add direnv
-	asdf install direnv latest
-	asdf global direnv latest
-	#https://github.com/direnv/direnv/blob/master/docs/installation.md
-	#apt install -y direnv
-	#https://github.com/direnv/direnv/blob/master/docs/hook.md 
-	echo 'eval "$(asdf exec direnv hook bash)"' | tee -a $HOME/.bashrc
-	echo 'eval "$(asdf exec direnv hook zsh)"' | tee -a $HOME/.zshrc
-else
-	echo "direnv already installed"
-fi
-
-#WSL GIT config
-# https://docs.microsoft.com/en-us/windows/wsl/tutorials/wsl-git
-# Set Git inside WSL to use windows credentials manager which works well with enterprise SSO systems
-# if [[ -z $(git config --get credential.helper) ]]; then 
-# 	git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-manager-core.exe"
-# 	git config --global credential.https://dev.azure.com.useHttpPath true
-# fi
-
-# pyenv install 
-if [[ -z $(which pyenv) ]]; then
-	curl https://pyenv.run | bash
-	echo "pyenv install complete" | cowsay -f dragon
-else
-	echo "pyenv already installed and in path" | cowsay -f dragon
-fi
-
-# main installer block for asdf-vm plugins
-# See what is supported here: https://github.com/asdf-vm/asdf-plugins/tree/master/plugins
-asdf_install() {
-	# $1 == asdf plugin names
-	# $2 == asdf plugin version
-	# $3 == cowsay graphic
-	# $4 == alt binary name*
-	# $5 == alt plugin URL*
-	# *Some packages have different names than the binary we need to 
-	# verify to see if the utility is not already installed
-	# golang vs go, dotnet-core vs dotnet
-	if [[ -z $4 ]]; then
-		util=$1
-	else
-		util=$4
+# require_non_root <euid>: abort when running as root.
+require_non_root() {
+	if [[ "$1" -eq 0 ]]; then
+		echo "DO NOT run as root/sudo; the script uses sudo itself where needed" >&2
+		exit 1
 	fi
-	if [[ -z $(which $util) ]]; then
-		if [[ -z $5 ]]; then
-			asdf plugin add $1
-		else
-			asdf plugin add $5
+}
+
+# add_once <file> <marker> <line>: append line unless marker already in file.
+add_once() {
+	local file=$1 marker=$2 line=$3
+	touch "$file"
+	grep -qF -- "$marker" "$file" || printf '%s\n' "$line" >> "$file"
+}
+
+# link_config <src> <dest>: symlink src to dest, backing up a real dest file.
+link_config() {
+	local src=$1 dest=$2
+	mkdir -p "$(dirname "$dest")"
+	if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then return 0; fi
+	if [[ -e "$dest" || -L "$dest" ]]; then mv "$dest" "$dest.bak"; fi
+	ln -s "$src" "$dest"
+}
+
+# copy_config <src> <dest>: copy src over dest; back up a differing user file.
+copy_config() {
+	local src=$1 dest=$2
+	mkdir -p "$(dirname "$dest")"
+	if [[ -L "$dest" ]]; then rm "$dest"
+	elif [[ -f "$dest" ]] && ! cmp -s "$src" "$dest" && [[ ! -e "$dest.bak" ]]; then
+		mv "$dest" "$dest.bak"
+	fi
+	cp "$src" "$dest"
+}
+
+# install_config <src> <dest>: symlink when the repo lives inside WSL; copy
+# when it lives on the Windows drive (/mnt/*) so shells don't depend on the
+# Windows clone. Re-run wsl-setup.sh after editing config/ in that case.
+install_config() {
+	if [[ "$REPO_DIR" == /mnt/* ]]; then copy_config "$1" "$2"; else link_config "$1" "$2"; fi
+}
+
+# set_git_identity <name> <email>: only fills in what is empty and given.
+set_git_identity() {
+	local name=${1:-} email=${2:-}
+	if [[ -n "$name" && -z "$(git config --global --get user.name || true)" ]]; then
+		git config --global user.name "$name"
+	fi
+	if [[ -n "$email" && -z "$(git config --global --get user.email || true)" ]]; then
+		git config --global user.email "$email"
+	fi
+	git config --global alias.co checkout
+	git config --global alias.ci commit
+	git config --global alias.st status
+	git config --global alias.ad add
+	git config --global alias.br branch
+	git config --global alias.pl pull
+	git config --global alias.pu push
+	git config --global alias.unstage reset HEAD --
+	git config --global --add --bool push.autoSetupRemote true
+}
+
+# Use the Windows Git credential manager (works with enterprise SSO).
+set_credential_helper() {
+	local root=${GIT_ROOT:-$GIT_ROOT_DEFAULT} helper="" c
+	for c in "$root/mingw64/bin/git-credential-manager.exe" \
+		"$root/mingw64/libexec/git-core/git-credential-manager.exe" \
+		"$root/mingw64/libexec/git-core/git-credential-manager-core.exe"; do
+		if [[ -f "$c" ]]; then helper=$c; break; fi
+	done
+	if [[ -z "$helper" ]]; then
+		echo "WARN: Git for Windows credential manager not found under $root; skipping" >&2
+		return 0
+	fi
+	if [[ -z "$(git config --global --get credential.helper || true)" ]]; then
+		# git runs the helper through a shell, so spaces must be escaped
+		git config --global credential.helper "${helper// /\\ }"
+		git config --global credential.https://dev.azure.com.useHttpPath true
+	fi
+}
+
+# Point this distro's podman CLI at Podman Desktop's machine so containers
+# show up in the GUI. Prefers the rootful socket (Podman Desktop's default).
+connect_podman_desktop() {
+	local dir=${PODMAN_SOCKET_DIR:-/mnt/wsl/podman-sockets/podman-machine-default}
+	local name sock
+	if [[ -S "$dir/podman-root.sock" ]]; then
+		name=podman-machine-default-root sock="$dir/podman-root.sock"
+		# the rootful socket is writable by gid 10 (uucp on Ubuntu)
+		# check the group database, not id -G: a fresh add only shows in new sessions
+		if ! getent group 10 | cut -d: -f4 | tr ',' '\n' | grep -qx "$(whoami)"; then
+			sudo usermod --append --groups 10 "$(whoami)"
+			echo "NOTE: added $(whoami) to group 10; open a new WSL session for it to apply"
 		fi
-		asdf install $1 $2
-		full_version=$(asdf list $1 | sort -r | head -n 1)
-		asdf global $1 $full_version
-		echo "${1} install complete" | cowsay -f $3
+	elif [[ -S "$dir/podman-user.sock" ]]; then
+		name=podman-machine-default-user sock="$dir/podman-user.sock"
 	else
-		echo "${1} already installed and in path" | cowsay -f $3
+		echo "NOTE: Podman Desktop machine not found at $dir. Create/start it in" \
+			"Podman Desktop, then re-run wsl-setup.sh to connect. Using local podman for now."
+		return 0
+	fi
+	if ! podman system connection list --format '{{.Name}}' | grep -qx "$name"; then
+		podman system connection add --default "$name" "unix://$sock"
 	fi
 }
 
-
-#For AWS CLI we want to ensure everyone has the newer v2 cli
-if [[ -z $(which aws) && ! -z $(aws --version | grep -v aws-cli/2) ]]; then
-	asdf plugin add awscli
-	asdf install awscli latest:2
-	asdf global awscli latest
-	echo "awscli install complete" | cowsay -f duck
-else
-	echo "awscli already installed and in path" | cowsay -f duck
-fi
-
-# Keep in Alphabetical Order Please
-asdf_install aws-vault latest flaming-sheep aws-vault https://github.com/karancode/asdf-aws-vault.git
-asdf_install golang latest ghostbusters go
-asdf_install helm latest turkey
-asdf_install kubectl latest flaming-sheep
-asdf_install kubectx latest hellokitty
-asdf_install k3sup latest bunny
-asdf_install k9s latest bunny
-asdf_install packer latest kosh
-asdf_install starship latest vader
-asdf_install terraform latest bud-frogs
-asdf_install terraform-docs latest www
-asdf_install tflint latest turtle
-asdf_install tfsec latest stimpy
-
-# Configure Shells for a beautiful CLI experience
-# https://starship.rs/
-if [[ -z $(grep starship $HOME/.bashrc) ]]; then
-	echo "export STARSHIP_CONFIG=~/.config/starship.toml" | tee -a $HOME/.zshrc
-	echo 'eval "$(starship init bash)"' | tee -a $HOME/.bashrc
-fi
-if [[ -z $(grep starship $HOME/.zshrc) ]]; then
-	echo "export STARSHIP_CONFIG=~/.config/starship.toml" | tee -a $HOME/.zshrc
-	echo 'eval "$(starship init zsh)"' | tee -a $HOME/.zshrc
-	if [[ ! -d $HOME/.oh-my-zsh/ ]]; then
-		echo "installing ohmyzsh"
-		sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+# Azure DevOps commands (az repos/boards/pipelines) ship as an az extension.
+add_az_devops_extension() {
+	if ! az extension show --name azure-devops >/dev/null 2>&1; then
+		az extension add --name azure-devops --only-show-errors
 	fi
-	echo "Adding the following to .zshrc:"
-	cat <<EOF >> $HOME/.zshrc
-plugins=(git asdf helm kubectl kubectx aws aliases battery gnu-utils history man python pylint pyenv terraform ubuntu)
-# for ansible set LANG to C.UTF-8
-export LANG=C.UTF-8 
-export EDITOR="vim"
-export GPG_TTY=$(tty)
-export AWS_VAULT_BACKEND=pass
-export AWS_PAGER=""
-export AWS_SESSION_TOKEN_TTL=8h
-export AWS_CHAINED_SESSION_TOKEN_TTL=8h
-export AWS_ASSUME_ROLE_TTL=8h
-alias vzsh="vim $HOME/.zshrc && source $HOME/.zshrc"
-alias fdate="sudo ntpdate pool.ntp.org"
-alias k="kubectl"
-alias kx="kubectx"
-alias tf="terraform
-alias g="git"
-alias ga="git add"
-alias gb="git branch"
-alias gbn="git checkout -b"
-alias gbd="git branch -D"
-alias gci"git commit"
-alias gco"git checkout"
-alias gp="git push"
-alias gt="git tag"
-# fluxcd
-source <(flux completion zsh)
-## functions
-function ave(){
-  export AWS_VAULT=""
-  aws-vault exec $1
 }
-function setup-ansible() {
-  eval `ssh-agent`
-  ssh-add ~/.ssh/ubuntu-ansible
-  export ANSIBLE_VAULT_PASSWORD_FILE=$HOME/bin/get-vault-pass
+
+# zsh never reads ~/.profile, so put the mise install dir on PATH for every zsh
+# (the `mise bootstrap` activation blocks call `mise` by name).
+add_zsh_path() {
+	# shellcheck disable=SC2016 # expand at shell startup, not now
+	add_once "$HOME/.zshenv" ".local/bin" 'export PATH="$HOME/.local/bin:$PATH"'
 }
-EOF
-fi
-if [[ ! -f $HOME/.config/starship.toml ]]; then
-	cp ./starship.toml $HOME/.config/starship.toml
-fi
 
+# zsh: mise activation is managed by `mise bootstrap` ([bootstrap.mise_shell_activate]
+# in config/mise.toml). bash: our own line, because bootstrap's bash mode creates
+# ~/.bash_profile, which makes Ubuntu login shells skip ~/.profile and ~/.bashrc.
+# Global gitignore at git's default XDG path (no config needed). A custom
+# core.excludesFile overrides that path, so warn instead of silently doing nothing.
+install_git_ignore() {
+	install_config "$REPO_DIR/config/gitignore_global" "$HOME/.config/git/ignore"
+	local custom
+	custom="$(git config --global --get core.excludesFile || true)"
+	if [[ -n "$custom" ]]; then
+		echo "WARN: core.excludesFile=$custom overrides ~/.config/git/ignore; merge it or unset it" >&2
+	fi
+}
 
-if [[ ! -f $HOME/bin/get-vault-pass ]]; then
-	cat <<EOF >> $HOME/bin/get-vault-pass
-#!/bin/bash
-pass munilink/ansible-vault-password
-EOF
-	chmod +x $HOME/bin/get-vault-pass
-fi
+wire_shell() {
+	local rc=$1 shell=$2
+	if [[ "$shell" == bash ]]; then
+		add_once "$rc" "mise activate" "eval \"\$(\$HOME/.local/bin/mise activate bash)\""
+	fi
+	add_once "$rc" "direnv hook" "eval \"\$(direnv hook $shell)\""
+	add_once "$rc" "STARSHIP_CONFIG" "export STARSHIP_CONFIG=\$HOME/.config/starship.toml"
+	add_once "$rc" "starship init" "eval \"\$(starship init $shell)\""
+	add_once "$rc" "devops/aliases.sh" "[ -f \"\$HOME/.config/devops/aliases.sh\" ] && . \"\$HOME/.config/devops/aliases.sh\""
+}
 
-echo "All done" | cowsay
+main() {
+	require_non_root "$EUID"
+
+	sudo apt-get update -qq
+	sudo apt-get install -y -qq curl git gpg pass vim cowsay fortune-mod podman uidmap
+
+	if ! command -v mise >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/mise" ]]; then
+		curl -fsSL https://mise.run | sh
+	fi
+	export PATH="$HOME/.local/bin:$PATH"
+
+	install_config "$REPO_DIR/config/mise.toml" "$HOME/.config/mise/config.toml"
+	install_config "$REPO_DIR/config/starship.toml" "$HOME/.config/starship.toml"
+	install_config "$REPO_DIR/config/aliases.sh" "$DEVOPS_CONFIG_DIR/aliases.sh"
+	install_git_ignore
+	mise install --yes
+	eval "$(mise env -s bash)" # put mise-managed tools on PATH for the rest of this script
+	uv python install
+	add_az_devops_extension
+
+	wire_shell "$HOME/.bashrc" bash
+	add_zsh_path
+	mise bootstrap --only mise-shell-activate --yes # writes the activate block before ours
+	wire_shell "$HOME/.zshrc" zsh
+
+	set_git_identity "${1:-}" "${2:-}"
+	set_credential_helper
+	connect_podman_desktop
+
+	/usr/games/cowsay "All done"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

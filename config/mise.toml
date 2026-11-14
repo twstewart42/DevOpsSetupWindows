@@ -1,0 +1,46 @@
+# Single source of truth for DevOps tool versions.
+# Linked to ~/.config/mise/config.toml by wsl-setup.sh.
+# Change a version here, then run: mise install
+# zsh activation (~/.zshrc, ~/.zprofile) is applied by: mise bootstrap --only mise-shell-activate
+# bash is wired by wsl-setup.sh instead (bootstrap's bash mode creates ~/.bash_profile,
+# which makes Ubuntu login shells skip ~/.profile and ~/.bashrc).
+[bootstrap.mise_shell_activate]
+zsh = true
+
+# Shared by WSL (wsl-setup.sh) and Windows (windows-setup.ps1). Tools limited with
+# os = [...] don't run natively on Windows: ansible has no Windows control node, and
+# awscli has no Windows build here (windows-setup.ps1 installs it via winget instead).
+# ansible pins Python 3.13: ansible-core crashes on 3.15 (dataclasses._is_type removed).
+[tools]
+ansible = { version = "latest", os = ["linux", "macos"], uvx_args = "--python 3.13" }
+awscli = { version = "latest", os = ["linux", "macos"] }
+azure-cli = "latest"
+azure-kubelogin = "latest"
+direnv = "latest"
+dotnet = "lts"
+gitleaks = "latest"
+go = "latest"
+helm = "latest"
+jq = "latest"
+k3sup = "latest"
+k9s = "latest"
+kubectl = "latest"
+kubectx = "latest"
+packer = "latest"
+powershell-core = "latest"
+ripgrep = "latest"
+saml2aws = "latest"
+starship = "latest"
+stern = "latest"
+terraform = "latest"
+terraform-docs = "latest"
+tflint = "latest"
+tfsec = "latest"
+tmux = "latest"
+trivy = "latest"
+uv = "latest"
+vim = "latest"
+vscode-cli = "latest"
+yamlfmt = "latest"
+yamllint = "latest"
+yq = "latest"

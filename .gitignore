@@ -1,0 +1,55 @@
+# --- Dependencies / environments ---
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Build output ---
+dist/
+build/
+*.egg-info/
+
+# --- Terraform (keep .terraform.lock.hcl committed) ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# --- Secrets / local overrides (commit .envrc, not .env) ---
+.env
+.env.*
+!.env.example
+mise.local.toml
+.mise.local.toml
+*.pem
+*.key
+kubeconfig*
+
+# --- Logs, backups, temp ---
+*.log
+*.bak
+*.tmp
+*.swp
+*.swo
+*~
+
+# --- OS / editor cruft (.vscode/extensions.json is tracked) ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Agent scratch space ---
+.superpowers/

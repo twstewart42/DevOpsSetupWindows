@@ -44,6 +44,12 @@ home_symbol = "🏠"
 style = "bold fg:cyan"
 disabled = false
 
+# [env_var]
+# variable = "SHELL"
+# default = "Zsh"
+# prefix = "<"
+# suffix = ">"
+
 [git_branch]
 symbol = "🌱 "
 truncation_length = 64
@@ -63,6 +69,24 @@ progress_divider = " of "
 style = "bold yellow"
 disabled = false
 
+# [git_status]
+# conflicted = "🏳"
+# ahead = "🏎💨"
+# behind = "😰"
+# diverged = "😵"
+# untracked = "🤷‍"
+# stashed = "📦"
+# modified = "📝"
+# staged.value = "++"
+# staged.style = "green"
+# staged_count.enabled = true
+# staged_count.style = "green"
+# renamed = "👅"
+# deleted = "🗑"
+
+# [[git_status.count]]
+# enabled = true
+
 [hostname]
 ssh_only = false
 #symbol = "🤖"
@@ -71,6 +95,11 @@ format = "[$hostname]($style)"
 style = "bold purple"
 trim_at = "."
 disabled = false
+
+# [jobs]
+# symbol = "+ "
+# threshold = 1
+
 
 [line_break]
 disabled = false
@@ -88,6 +117,11 @@ symbol = "🐏"
 symbol = "⬢ "
 style = "bold green"
 disabled = false
+
+# [package]
+# symbol = "📦 "
+# style = "bold red"
+# disabled = false
 
 [python]
 symbol = "🐍 "
@@ -116,3 +150,5 @@ style_root = "bold red"
 style_user = "bold yellow"
 show_always = false
 disabled = false
+
+
